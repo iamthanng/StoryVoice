@@ -32,7 +32,7 @@ build/
 ### VS Code ###
 .vscode/
 
-uploads/
+**/uploads/
 implementation_plan.md
 
 frontend/node_modules/

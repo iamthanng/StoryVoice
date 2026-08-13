@@ -19,7 +19,7 @@ public class FileStorageService {
     private final Path uploadLocation;
 
     public FileStorageService(@Value("${app.upload.dir:./uploads}") String uploadDir) {
-        this.uploadLocation = Paths.get(uploadDir).toAbsolutePath().normalize();
+        this.uploadLocation = fs.training.storyvoice.config.WebMvcConfig.resolveUploadPath(uploadDir);
         try {
             Files.createDirectories(this.uploadLocation);
             Files.createDirectories(this.uploadLocation.resolve("covers"));

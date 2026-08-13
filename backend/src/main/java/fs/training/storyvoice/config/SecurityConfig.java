@@ -41,7 +41,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration)
+            throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
     }
 
@@ -50,7 +51,8 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
+        configuration.setAllowedHeaders(
+                Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
         configuration.setExposedHeaders(List.of("Authorization", "Content-Range", "Content-Length", "Accept-Ranges"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
@@ -63,37 +65,35 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable)
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .exceptionHandling(exceptions -> exceptions
-                .authenticationEntryPoint(customAuthenticationEntryPoint)
-                .accessDeniedHandler(customAccessDeniedHandler)
-            )
-            .authorizeHttpRequests(auth -> auth
-                // Endpoints công khai
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers(
-                    "/v3/api-docs/**",
-                    "/api-docs/**",
-                    "/swagger-ui/**",
-                    "/swagger-ui.html",
-                    "/swagger-resources/**",
-                    "/webjars/**"
-                ).permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/stories/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/genres/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/authors/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/chapters/public/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/audio/stream/**").permitAll()
-                .requestMatchers("/uploads/**").permitAll()
-                
-                // Endpoints dành riêng cho Admin
-                .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
-                
-                // Các request khác yêu cầu xác thực
-                .anyRequest().authenticated()
-            );
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(customAuthenticationEntryPoint)
+                        .accessDeniedHandler(customAccessDeniedHandler))
+                .authorizeHttpRequests(auth -> auth
+                        // Endpoints công khai
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(
+                                "/v3/api-docs/**",
+                                "/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/swagger-resources/**",
+                                "/webjars/**")
+                        .permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/stories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/genres/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/authors/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/chapters/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/audio/stream/**").permitAll()
+                        .requestMatchers("/uploads/**").permitAll()
+
+                        // Endpoints dành riêng cho Admin
+                        .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
+
+                        // Các request khác yêu cầu xác thực
+                        .anyRequest().authenticated());
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

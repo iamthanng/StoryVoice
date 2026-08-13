@@ -98,7 +98,8 @@ public class AudioService {
                 ? audioFile.getFilePath().substring("/uploads/".length())
                 : audioFile.getFilePath();
 
-        Path filePath = Paths.get("./uploads").resolve(cleanPath).toAbsolutePath().normalize();
+        Path uploadPath = fs.training.storyvoice.config.WebMvcConfig.resolveUploadPath("./uploads");
+        Path filePath = uploadPath.resolve(cleanPath).toAbsolutePath().normalize();
         Resource resource = new FileSystemResource(filePath);
 
         if (!resource.exists()) {

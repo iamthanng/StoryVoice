@@ -8,6 +8,7 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -21,26 +22,22 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
+        Path uploadPath = resolveUploadPath(uploadDir);
         String uploadAbsolutePath = uploadPath.toUri().toString();
+        if (!uploadAbsolutePath.endsWith("/")) {
+            uploadAbsolutePath += "/";
+        }
 
         // Đấu nối URL /uploads/** tới thư mục đĩa cứng local ./uploads/
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations(uploadAbsolutePath);
     }
 
-    /**
-     * Cho phép Jackson Converter xử lý cả application/octet-stream từ Swagger UI
-     * giải quyết triệt để lỗi HttpMediaTypeNotSupportedException khi upload file kèm DTO trong Swagger UI
-     */
-    @Override
-    public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
-        for (HttpMessageConverter<?> converter : converters) {
-            if (converter instanceof MappingJackson2HttpMessageConverter jacksonConverter) {
-                List<MediaType> mediaTypes = new ArrayList<>(jacksonConverter.getSupportedMediaTypes());
-                mediaTypes.add(MediaType.APPLICATION_OCTET_STREAM);
-                jacksonConverter.setSupportedMediaTypes(mediaTypes);
-            }
+    public static Path resolveUploadPath(String configuredDir) {
+        Path backendPath = Paths.get("backend/uploads").toAbsolutePath().normalize();
+        if (Files.exists(backendPath)) {
+            return backendPath;
         }
+        return Paths.get(configuredDir != null ? configuredDir : "./uploads").toAbsolutePath().normalize();
     }
 }
