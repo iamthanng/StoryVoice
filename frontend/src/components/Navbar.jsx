@@ -19,7 +19,10 @@ const Navbar = () => {
               <Link to="/" className="text-textPrimary hover:text-primary px-3 py-2 rounded-md font-medium transition-colors">
                 Trang chủ
               </Link>
-              {user?.role === 'ADMIN' && (
+              <Link to="/browse" className="text-textPrimary hover:text-primary px-3 py-2 rounded-md font-medium transition-colors">
+                Thư viện
+              </Link>
+              {(user?.role === 'ROLE_ADMIN' || user?.role === 'ADMIN') && (
                 <Link to="/admin" className="text-textPrimary hover:text-primary px-3 py-2 rounded-md font-medium transition-colors">
                   Quản trị
                 </Link>
@@ -33,7 +36,7 @@ const Navbar = () => {
                   <span className="text-sm text-textSecondary">
                     Chào, <span className="text-white font-semibold">{user.username}</span>
                   </span>
-                  {user.is_vip && (
+                  {(user?.isVip || user?.vip || user?.is_vip) && (
                     <span className="px-2 py-1 text-xs font-bold bg-yellow-500/20 text-yellow-500 rounded border border-yellow-500/50">
                       VIP
                     </span>

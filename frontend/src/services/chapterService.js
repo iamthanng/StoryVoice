@@ -1,15 +1,21 @@
 import api from './api';
 
+// PublicChapterController maps to /api (base) so:
+// GET /api/stories/{storyId}/chapters
+// GET /api/chapters/{id}
 export const getChaptersByStory = (storyId) =>
-  api.get(`/public/stories/${storyId}/chapters`);
+  api.get(`/stories/${storyId}/chapters`);
 
 export const getChapterContent = (chapterId) =>
-  api.get(`/public/chapters/${chapterId}`);
+  api.get(`/chapters/${chapterId}`);
 
+// AudioController: POST /api/chapters/{chapterId}/tts
 export const generateOrGetTts = (chapterId, voiceId = null) => {
   const params = voiceId ? { voiceId } : {};
   return api.post(`/chapters/${chapterId}/tts`, null, { params });
 };
 
-export const getAudioStreamUrl = (audioId) =>
-  `http://localhost:8080/api/audio/stream/${audioId}`;
+import { getMediaUrl } from '../utils/urlHelper';
+
+// Helper function to build full Audio URL for browser HTML5 <audio>
+export const getFullAudioUrl = (audioUrl) => getMediaUrl(audioUrl);

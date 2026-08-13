@@ -18,10 +18,9 @@ const LoginPage = () => {
     setLoading(true);
     try {
       const response = await api.post('/auth/login', { username, password });
-      const { token, type, ...userData } = response.data.data;
+      const { accessToken, user: userData } = response.data.data;
       
-      // Assume the backend returns data { token, id, username, role, is_vip, ... } inside data
-      login(token, userData);
+      login(accessToken, userData);
       
       navigate('/');
     } catch (err) {
