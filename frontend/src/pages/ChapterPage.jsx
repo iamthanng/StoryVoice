@@ -1,15 +1,14 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { getChapterContent, generateOrGetTts, getAudioStreamUrl } from '../services/chapterService';
-import { getChaptersByStory } from '../services/chapterService';
+import { getChapterContent, generateOrGetTts, getChaptersByStory, getFullAudioUrl } from '../services/chapterService';
 import { AuthContext } from '../context/AuthContext';
-import AudioPlayer from '../components/AudioPlayer';
+import { AudioContext } from '../context/AudioContext';
 
 const AccessDeniedScreen = ({ accessLevel }) => {
   const config = {
     MEMBER: {
       title: '🔒 Chương này yêu cầu đăng nhập',
-      desc: 'Bạn cần đăng nhập để đọc chương này.',
+      desc: 'Bạn cần đăng nhập tài khoản để đọc chương này.',
       link: '/login',
       linkLabel: 'Đăng nhập ngay',
     },
@@ -40,12 +39,12 @@ const ChapterPage = () => {
   const { storyId, chapterId } = useParams();
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
+  const { currentAudio, playAudio } = useContext(AudioContext);
 
   const [chapter, setChapter] = useState(null);
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [accessDenied, setAccessDenied] = useState(null);
-  const [audioSrc, setAudioSrc] = useState(null);
   const [ttsLoading, setTtsLoading] = useState(false);
   const [ttsError, setTtsError] = useState('');
 
@@ -53,22 +52,20 @@ const ChapterPage = () => {
     setLoading(true);
     setAccessDenied(null);
     setTtsError('');
+
     try {
       const [chapterRes, chaptersListRes] = await Promise.all([
         getChapterContent(chapterId),
         getChaptersByStory(storyId),
       ]);
-      setChapter(chapterRes.data.data);
+      const chapterData = chapterRes.data.data;
+      setChapter(chapterData);
       setChapters(chaptersListRes.data.data || []);
-
-      // If chapter already has audio, set it
-      if (chapterRes.data.data?.audioFileId) {
-        setAudioSrc(getAudioStreamUrl(chapterRes.data.data.audioFileId));
-      }
     } catch (err) {
-      if (err.response?.status === 403) {
-        const requiredLevel = err.response?.data?.data?.accessLevel || 'MEMBER';
-        setAccessDenied(requiredLevel);
+      if (err.response?.status === 403 || err.response?.status === 401) {
+        const msg = err.response?.data?.message || '';
+        const level = msg.toUpperCase().includes('VIP') ? 'VIP' : 'MEMBER';
+        setAccessDenied(level);
       }
     } finally {
       setLoading(false);
@@ -79,14 +76,49 @@ const ChapterPage = () => {
     fetchChapter();
   }, [chapterId, storyId]);
 
+  const handlePlayAudio = () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    if (chapter?.audioUrl) {
+      const fullUrl = getFullAudioUrl(chapter.audioUrl);
+      playAudio({
+        src: fullUrl,
+        title: chapter.title,
+        storyTitle: chapter.storyTitle,
+        chapterId: chapterId,
+        storyId: storyId,
+      });
+    }
+  };
+
   const handleGenerateTts = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
     setTtsLoading(true);
     setTtsError('');
     try {
       const res = await generateOrGetTts(chapterId);
-      const audioFileId = res.data.data?.audioFileId;
-      if (audioFileId) {
-        setAudioSrc(getAudioStreamUrl(audioFileId));
+      const audioUrl = res.data.data?.audioUrl;
+      if (audioUrl) {
+        setChapter((prev) => ({
+          ...prev,
+          hasAudio: true,
+          audioUrl: audioUrl,
+        }));
+        const fullUrl = getFullAudioUrl(audioUrl);
+        playAudio({
+          src: fullUrl,
+          title: chapter?.title,
+          storyTitle: chapter?.storyTitle,
+          chapterId: chapterId,
+          storyId: storyId,
+        });
+      } else {
+        setTtsError('Không nhận được file audio từ hệ thống.');
       }
     } catch (err) {
       setTtsError(err.response?.data?.message || 'Không thể tạo audio AI. Vui lòng thử lại sau.');
@@ -94,6 +126,8 @@ const ChapterPage = () => {
       setTtsLoading(false);
     }
   };
+
+  const isCurrentPlaying = currentAudio?.src === getFullAudioUrl(chapter?.audioUrl);
 
   // Navigation helpers
   const currentIndex = chapters.findIndex((c) => String(c.id) === String(chapterId));
@@ -132,41 +166,64 @@ const ChapterPage = () => {
         </p>
       </div>
 
-      {/* Audio controls */}
-      <div className="flex items-center gap-3 mb-6 p-4 bg-surface rounded-xl border border-gray-800">
-        {audioSrc ? (
-          <button
-            onClick={() => setAudioSrc(audioSrc)}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm"
-          >
-            🎵 Nghe audio chương này
-          </button>
-        ) : (
-          <>
-            <button
-              onClick={handleGenerateTts}
-              disabled={ttsLoading || !user}
-              className="flex items-center gap-2 bg-primary hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm disabled:opacity-50"
-            >
-              {ttsLoading ? (
-                <><span className="animate-spin">⏳</span> Đang tạo AI audio...</>
-              ) : (
-                <><span>🤖</span> Nghe bằng AI</>
-              )}
-            </button>
-            {!user && (
-              <span className="text-textSecondary text-xs">
-                Bạn cần{' '}
-                <Link to="/login" className="text-primary hover:underline">
-                  đăng nhập
-                </Link>{' '}
-                để dùng tính năng này.
-              </span>
-            )}
-          </>
-        )}
+      {/* Audio Bar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-8 p-4 bg-surface rounded-xl border border-gray-800 shadow-md">
+        <div className="flex items-center gap-3">
+          {!user ? (
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🎧</span>
+              <div>
+                <p className="text-sm font-semibold text-white">Phát Audio Chương</p>
+                <p className="text-xs text-textSecondary">
+                  Bạn cần{' '}
+                  <Link to="/login" className="text-primary font-bold hover:underline">
+                    Đăng nhập
+                  </Link>{' '}
+                  để nghe Audio hoặc tạo giọng nói AI.
+                </p>
+              </div>
+            </div>
+          ) : chapter?.hasAudio && chapter?.audioUrl ? (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handlePlayAudio}
+                className={`flex items-center gap-2 font-bold py-2.5 px-5 rounded-lg transition-colors text-sm shadow-lg ${
+                  isCurrentPlaying
+                    ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-orange-950/40 animate-pulse'
+                    : 'bg-green-600 hover:bg-green-700 text-white shadow-green-900/30'
+                }`}
+              >
+                <span>{isCurrentPlaying ? '🎵' : '▶'}</span>
+                {isCurrentPlaying ? 'Đang phát ở Player' : 'Nghe Audio'}
+              </button>
+              <span className="text-xs text-green-400 font-medium">✓ Đã có sẵn file Audio</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleGenerateTts}
+                disabled={ttsLoading}
+                className="flex items-center gap-2 bg-primary hover:bg-orange-600 text-white font-bold py-2.5 px-5 rounded-lg transition-colors text-sm disabled:opacity-50 shadow-lg shadow-orange-900/30"
+              >
+                {ttsLoading ? (
+                  <>
+                    <span className="animate-spin">⏳</span> Đang tạo giọng nói AI...
+                  </>
+                ) : (
+                  <>
+                    <span>🤖</span> Nghe bằng AI (TTS)
+                  </>
+                )}
+              </button>
+              <span className="text-xs text-textSecondary">Chưa có audio. Bấm để tạo giọng nói AI.</span>
+            </div>
+          )}
+        </div>
+
         {ttsError && (
-          <span className="text-red-400 text-xs">{ttsError}</span>
+          <div className="text-red-400 text-xs bg-red-500/10 border border-red-500/30 px-3 py-1.5 rounded">
+            {ttsError}
+          </div>
         )}
       </div>
 
@@ -180,7 +237,7 @@ const ChapterPage = () => {
         {prevChapter ? (
           <Link
             to={`/story/${storyId}/chapter/${prevChapter.id}`}
-            className="flex items-center gap-2 text-textSecondary hover:text-primary transition-colors"
+            className="flex items-center gap-2 text-textSecondary hover:text-primary transition-colors text-sm"
           >
             ← {prevChapter.title}
           </Link>
@@ -188,21 +245,12 @@ const ChapterPage = () => {
         {nextChapter ? (
           <Link
             to={`/story/${storyId}/chapter/${nextChapter.id}`}
-            className="flex items-center gap-2 text-textSecondary hover:text-primary transition-colors"
+            className="flex items-center gap-2 text-textSecondary hover:text-primary transition-colors text-sm"
           >
             {nextChapter.title} →
           </Link>
         ) : <span />}
       </div>
-
-      {/* Sticky Audio Player */}
-      {audioSrc && (
-        <AudioPlayer
-          audioSrc={audioSrc}
-          chapterTitle={chapter?.title}
-          onClose={() => setAudioSrc(null)}
-        />
-      )}
     </div>
   );
 };

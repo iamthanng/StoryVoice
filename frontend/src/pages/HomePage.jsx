@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getAllStories } from '../services/storyService';
+import { getMediaUrl } from '../utils/urlHelper';
 
 const HomePage = () => {
   const [stories, setStories] = useState([]);
@@ -56,7 +57,7 @@ const HomePage = () => {
               <div className="relative overflow-hidden rounded-lg aspect-[2/3] mb-3 bg-surface">
                 {story.coverImage ? (
                   <img
-                    src={story.coverImage}
+                    src={getMediaUrl(story.coverImage)}
                     alt={story.title}
                     className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
                   />

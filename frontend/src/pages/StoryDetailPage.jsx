@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { getStoryById } from '../services/storyService';
 import { getChaptersByStory } from '../services/chapterService';
 
+import { getMediaUrl } from '../utils/urlHelper';
+
 const AccessBadge = ({ level }) => {
   const config = {
     PUBLIC: { label: 'Công khai', className: 'bg-green-500/20 text-green-400 border-green-500/40' },
@@ -70,7 +72,7 @@ const StoryDetailPage = () => {
         <div className="w-full md:w-48 flex-shrink-0">
           {story.coverImage ? (
             <img
-              src={story.coverImage}
+              src={getMediaUrl(story.coverImage)}
               alt={story.title}
               className="rounded-xl w-full object-cover aspect-[2/3] shadow-lg shadow-black/50"
             />
