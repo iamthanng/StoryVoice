@@ -15,6 +15,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/admin/chapters")
 @RequiredArgsConstructor
@@ -23,6 +25,12 @@ import org.springframework.web.multipart.MultipartFile;
 public class AdminChapterController {
 
     private final ChapterService chapterService;
+
+    @Operation(summary = "Lấy danh sách chương của truyện cho Admin")
+    @GetMapping("/story/{storyId}")
+    public ResponseEntity<ApiResponse<List<ChapterResponse>>> getChaptersByStory(@PathVariable Long storyId) {
+        return ResponseEntity.ok(ApiResponse.success(chapterService.getChaptersByStoryId(storyId, null)));
+    }
 
     @Operation(summary = "Tạo chương mới (JSON)")
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)

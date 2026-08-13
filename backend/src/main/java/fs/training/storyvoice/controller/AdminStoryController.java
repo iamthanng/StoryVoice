@@ -8,12 +8,17 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 @RestController
 @RequestMapping("/api/admin/stories")
@@ -23,6 +28,18 @@ import org.springframework.web.multipart.MultipartFile;
 public class AdminStoryController {
 
     private final StoryService storyService;
+
+    @Operation(summary = "Lấy danh sách truyện cho Admin (Hỗ trợ tìm kiếm, lọc thể loại/tác giả, phân trang)")
+    @GetMapping
+    public ResponseEntity<ApiResponse<Page<StoryResponse>>> getAll(
+            @RequestParam(required = false) Long genreId,
+            @RequestParam(required = false) Long authorId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return ResponseEntity.ok(ApiResponse.success(storyService.getStories(genreId, authorId, keyword, pageable)));
+    }
 
     @Operation(summary = "Tạo truyện mới (JSON)")
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
