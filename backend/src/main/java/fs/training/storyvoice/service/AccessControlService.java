@@ -6,6 +6,8 @@ import fs.training.storyvoice.enums.UserRole;
 import fs.training.storyvoice.security.UserPrincipal;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 /**
@@ -39,9 +41,13 @@ public class AccessControlService {
             return true;
         }
 
-        // 2. Nếu là Khách (chưa đăng nhập) -> Không xem được MEMBER hay VIP
+        // 2. Nếu currentUser null → kiểm tra SecurityContext (admin gọi service với null vẫn được qua)
         if (currentUser == null) {
-            return false;
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            boolean isAdminContext = auth != null && auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals(UserRole.ROLE_ADMIN.name()));
+            if (isAdminContext) return true;
+            return false;  // Khách thực sự — không có quyền truy cập MEMBER/VIP
         }
 
         // 3. Admin có toàn quyền truy cập mọi chương

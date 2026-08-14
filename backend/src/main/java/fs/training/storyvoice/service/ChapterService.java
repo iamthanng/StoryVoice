@@ -31,44 +31,42 @@ public class ChapterService {
     private final AccessControlService accessControlService;
     private final FileStorageService fileStorageService;
 
+    // ---------------------------------------------------------------
+    // Danh sách chương (ẩn content để tiết kiệm băng thông)
+    // ---------------------------------------------------------------
     @Transactional(readOnly = true)
     public List<ChapterResponse> getChaptersByStoryId(Long storyId, UserPrincipal currentUser) {
         if (!storyRepository.existsById(storyId)) {
             throw new RuntimeException("Không tìm thấy truyện với ID: " + storyId);
         }
 
-        List<Chapter> chapters = chapterRepository.findByStoryIdOrderByChapterNumberAsc(storyId);
+        return chapterRepository.findByStoryIdOrderByChapterNumberAsc(storyId).stream()
+                .map(chapter -> {
+                    ChapterResponse response = chapterMapper.toChapterResponse(chapter);
+                    response.setIsLocked(!accessControlService.canAccessChapter(currentUser, chapter));
+                    response.setContent(null); // Ẩn nội dung trong danh sách
 
-        return chapters.stream().map(chapter -> {
-            ChapterResponse response = chapterMapper.toChapterResponse(chapter);
-            
-            // Tính toán cờ isLocked dựa vào AccessControlService
-            boolean canAccess = accessControlService.canAccessChapter(currentUser, chapter);
-            response.setIsLocked(!canAccess);
-
-            // Kiểm tra thông tin audio
-            Optional<AudioFile> audioOpt = audioFileRepository.findFirstByChapterIdOrderByCreatedAtDesc(chapter.getId());
-            if (audioOpt.isPresent()) {
-                response.setHasAudio(true);
-                response.setAudioUrl(audioOpt.get().getFilePath());
-                response.setAudioSource(audioOpt.get().getSource());
-            } else {
-                response.setHasAudio(false);
-            }
-
-            // Đối với danh sách tổng quan, ẩn nội dung chữ để tiết kiệm dung lượng JSON
-            response.setContent(null);
-
-            return response;
-        }).collect(Collectors.toList());
+                    Optional<AudioFile> audioOpt = audioFileRepository.findFirstByChapterIdOrderByCreatedAtDesc(chapter.getId());
+                    if (audioOpt.isPresent()) {
+                        response.setHasAudio(true);
+                        response.setAudioUrl(audioOpt.get().getFilePath());
+                        response.setAudioSource(audioOpt.get().getSource());
+                    } else {
+                        response.setHasAudio(false);
+                    }
+                    return response;
+                })
+                .collect(Collectors.toList());
     }
 
+    // ---------------------------------------------------------------
+    // Đọc nội dung đầy đủ một chương (có kiểm tra quyền)
+    // ---------------------------------------------------------------
     @Transactional(readOnly = true)
     public ChapterResponse getChapterContent(Long chapterId, UserPrincipal currentUser) {
         Chapter chapter = chapterRepository.findById(chapterId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy chương với ID: " + chapterId));
 
-        // Kiểm tra quyền và ném exception 403 nếu không đủ quyền
         accessControlService.checkAccess(currentUser, chapter);
 
         ChapterResponse response = chapterMapper.toChapterResponse(chapter);
@@ -86,6 +84,9 @@ public class ChapterService {
         return response;
     }
 
+    // ---------------------------------------------------------------
+    // Admin CRUD
+    // ---------------------------------------------------------------
     @Transactional
     public ChapterResponse createChapter(ChapterRequest request) {
         Story story = storyRepository.findById(request.getStoryId())
@@ -93,12 +94,12 @@ public class ChapterService {
 
         Chapter chapter = chapterMapper.toChapter(request);
         chapter.setStory(story);
+        Chapter saved = chapterRepository.save(chapter);
 
-        Chapter savedChapter = chapterRepository.save(chapter);
-
-        // Upload file audio thu sẵn if needed via separate API
-
-        return getChapterContent(savedChapter.getId(), null);
+        ChapterResponse response = chapterMapper.toChapterResponse(saved);
+        response.setIsLocked(false);
+        response.setHasAudio(false);
+        return response;
     }
 
     @Transactional
@@ -107,11 +108,21 @@ public class ChapterService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy chương với ID: " + id));
 
         chapterMapper.updateChapterFromRequest(request, chapter);
-        Chapter updatedChapter = chapterRepository.save(chapter);
+        Chapter updated = chapterRepository.save(chapter);
 
-        // Audio file update is handled via a separate API
+        ChapterResponse response = chapterMapper.toChapterResponse(updated);
+        response.setIsLocked(false);
 
-        return getChapterContent(updatedChapter.getId(), null);
+        Optional<AudioFile> audioOpt = audioFileRepository.findFirstByChapterIdOrderByCreatedAtDesc(updated.getId());
+        if (audioOpt.isPresent()) {
+            response.setHasAudio(true);
+            response.setAudioUrl(audioOpt.get().getFilePath());
+            response.setAudioSource(audioOpt.get().getSource());
+        } else {
+            response.setHasAudio(false);
+        }
+
+        return response;
     }
 
     @Transactional
@@ -129,7 +140,19 @@ public class ChapterService {
             audioFileRepository.save(audio);
         }
 
-        return getChapterContent(chapter.getId(), null);
+        ChapterResponse response = chapterMapper.toChapterResponse(chapter);
+        response.setIsLocked(false);
+
+        Optional<AudioFile> audioOpt = audioFileRepository.findFirstByChapterIdOrderByCreatedAtDesc(chapter.getId());
+        if (audioOpt.isPresent()) {
+            response.setHasAudio(true);
+            response.setAudioUrl(audioOpt.get().getFilePath());
+            response.setAudioSource(audioOpt.get().getSource());
+        } else {
+            response.setHasAudio(false);
+        }
+
+        return response;
     }
 
     @Transactional
@@ -137,7 +160,6 @@ public class ChapterService {
         Chapter chapter = chapterRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy chương với ID: " + id));
 
-        // Xóa các file audio của chương này
         List<AudioFile> audioFiles = audioFileRepository.findByChapterId(id);
         for (AudioFile audio : audioFiles) {
             fileStorageService.deleteFile(audio.getFilePath());

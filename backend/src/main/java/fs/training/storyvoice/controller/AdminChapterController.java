@@ -32,6 +32,12 @@ public class AdminChapterController {
         return ResponseEntity.ok(ApiResponse.success(chapterService.getChaptersByStoryId(storyId, null)));
     }
 
+    @Operation(summary = "Lấy chi tiết một chương (bao gồm nội dung) cho Admin")
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<ChapterResponse>> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(chapterService.getChapterContent(id, null)));
+    }
+
     @Operation(summary = "Tạo chương mới (JSON)")
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<ChapterResponse>> create(
