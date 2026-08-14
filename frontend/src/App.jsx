@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
 import { AudioProvider } from './context/AudioContext';
 
@@ -17,6 +18,8 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import StoryDetailPage from './pages/StoryDetailPage';
 import ChapterPage from './pages/ChapterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -26,43 +29,50 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminGenres from './pages/admin/AdminGenres';
 import AdminAuthors from './pages/admin/AdminAuthors';
 
+const GOOGLE_CLIENT_ID = '191758600715-6chb0785tbeduim7ajggfg5o3p8hsjqr.apps.googleusercontent.com';
+
 function App() {
   return (
-    <AuthProvider>
-      <AudioProvider>
-        <Router>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<MainLayout />}>
-              <Route index element={<HomePage />} />
-              <Route path="browse" element={<BrowsePage />} />
-              <Route path="login" element={<LoginPage />} />
-              <Route path="register" element={<RegisterPage />} />
-              <Route path="story/:id" element={<StoryDetailPage />} />
-              <Route path="story/:storyId/chapter/:chapterId" element={<ChapterPage />} />
-            </Route>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <AuthProvider>
+        <AudioProvider>
+          <Router>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<MainLayout />}>
+                <Route index element={<HomePage />} />
+                <Route path="browse" element={<BrowsePage />} />
+                <Route path="login" element={<LoginPage />} />
+                <Route path="register" element={<RegisterPage />} />
+                <Route path="forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="reset-password" element={<ResetPasswordPage />} />
+                <Route path="story/:id" element={<StoryDetailPage />} />
+                <Route path="story/:storyId/chapter/:chapterId" element={<ChapterPage />} />
+              </Route>
 
-            {/* Admin routes — protected, require ADMIN role */}
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute requiredRole="ADMIN">
-                  <AdminLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<AdminDashboard />} />
-              <Route path="stories" element={<AdminStories />} />
-              <Route path="stories/:storyId/chapters" element={<AdminChapters />} />
-              <Route path="genres" element={<AdminGenres />} />
-              <Route path="authors" element={<AdminAuthors />} />
-              <Route path="users" element={<AdminUsers />} />
-            </Route>
-          </Routes>
-        </Router>
-      </AudioProvider>
-    </AuthProvider>
+              {/* Admin routes — protected, require ADMIN role */}
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute requiredRole="ADMIN">
+                    <AdminLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<AdminDashboard />} />
+                <Route path="stories" element={<AdminStories />} />
+                <Route path="stories/:storyId/chapters" element={<AdminChapters />} />
+                <Route path="genres" element={<AdminGenres />} />
+                <Route path="authors" element={<AdminAuthors />} />
+                <Route path="users" element={<AdminUsers />} />
+              </Route>
+            </Routes>
+          </Router>
+        </AudioProvider>
+      </AuthProvider>
+    </GoogleOAuthProvider>
   );
 }
 
 export default App;
+
