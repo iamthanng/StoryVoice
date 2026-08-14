@@ -1,0 +1,18 @@
+package fs.training.storyvoice.repository;
+
+import fs.training.storyvoice.entity.PasswordResetToken;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+
+import java.util.Optional;
+
+public interface PasswordResetTokenRepository extends JpaRepository<PasswordResetToken, Long> {
+
+    Optional<PasswordResetToken> findByToken(String token);
+
+    /** Xóa tất cả token cũ của user trước khi tạo token mới */
+    @Modifying
+    @Query("DELETE FROM PasswordResetToken t WHERE t.user.id = :userId")
+    void deleteAllByUserId(Long userId);
+}

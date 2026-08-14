@@ -1,17 +1,17 @@
 package fs.training.storyvoice.service;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.gson.GsonFactory;
+import fs.training.storyvoice.dto.request.ForgotPasswordRequest;
 import fs.training.storyvoice.dto.request.GoogleLoginRequest;
 import fs.training.storyvoice.dto.request.LoginRequest;
 import fs.training.storyvoice.dto.request.RegisterRequest;
+import fs.training.storyvoice.dto.request.ResetPasswordRequest;
 import fs.training.storyvoice.dto.response.AuthResponse;
 import fs.training.storyvoice.dto.response.UserResponse;
+import fs.training.storyvoice.entity.PasswordResetToken;
 import fs.training.storyvoice.entity.User;
 import fs.training.storyvoice.enums.UserRole;
 import fs.training.storyvoice.mapper.UserMapper;
+import fs.training.storyvoice.repository.PasswordResetTokenRepository;
 import fs.training.storyvoice.repository.UserRepository;
 import fs.training.storyvoice.security.JwtTokenProvider;
 import fs.training.storyvoice.security.UserPrincipal;
@@ -25,6 +25,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.UUID;
 
@@ -38,6 +39,8 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
     private final UserMapper userMapper;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final EmailService emailService;
 
     @Value("${app.google.client-id}")
     private String googleClientId;
@@ -95,38 +98,23 @@ public class AuthService {
                 .build();
     }
 
-    // ─── Đăng nhập bằng Google (ID Token flow) ─────────────────────────────────
-
     /**
-     * Luồng hoạt động đăng nhập Google:
-     *
-     * 1. React FE: User click "Đăng nhập Google" → dùng @react-oauth/google
-     * 2. Google trả về { credential: "<ID_TOKEN>" } cho React
-     * 3. React gửi POST /api/auth/google với body { idToken: "<ID_TOKEN>" }
-     * 4. Backend dùng GoogleIdTokenVerifier để xác thực ID Token với Google
-     * 5. Lấy email, name từ payload Google
-     * 6. Tìm hoặc tạo User trong DB
-     * 7. Tạo JWT Token → trả về cho React
+     * Luồng Google OAuth2:
+     * Frontend dùng @react-oauth/google lấy access_token
+     * gọi Google userInfo API lấy email/name rồi truyền xuống Backend.
      */
     @Transactional
     public AuthResponse loginWithGoogle(GoogleLoginRequest request) {
-        // 1. Verify ID Token với Google
-        GoogleIdToken.Payload googlePayload = verifyGoogleIdToken(request.getIdToken());
-
-        String email = googlePayload.getEmail();
-
+        String email = request.getEmail();
         log.info("Google OAuth2 - Email: {}", email);
 
-        // 2. Tìm user theo email hoặc tự động tạo mới nếu chưa có
         User user = userRepository.findByEmail(email)
                 .orElseGet(() -> createGoogleUser(email));
 
-        // 3. Tạo Authentication object từ UserPrincipal
         UserPrincipal userPrincipal = UserPrincipal.create(user);
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 userPrincipal, null, userPrincipal.getAuthorities());
 
-        // 4. Tạo JWT Token
         String jwt = jwtTokenProvider.generateToken(authentication);
 
         return AuthResponse.builder()
@@ -135,26 +123,54 @@ public class AuthService {
                 .build();
     }
 
-    // ─── Private Helpers ────────────────────────────────────────────────────────
+    // ─── Quên Mật Khẩu ─────────────────────────────────────────────────────────
 
-    private GoogleIdToken.Payload verifyGoogleIdToken(String idTokenString) {
-        try {
-            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
-                    new NetHttpTransport(), new GsonFactory())
-                    .setAudience(Collections.singletonList(googleClientId))
-                    .build();
+    @Transactional
+    public void forgotPassword(ForgotPasswordRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản với email này."));
 
-            GoogleIdToken idToken = verifier.verify(idTokenString);
-            if (idToken == null) {
-                throw new RuntimeException("Google ID Token không hợp lệ hoặc đã hết hạn");
-            }
+        // Xóa token cũ
+        passwordResetTokenRepository.deleteAllByUserId(user.getId());
 
-            return idToken.getPayload();
-        } catch (Exception e) {
-            log.error("Lỗi khi xác thực Google ID Token: {}", e.getMessage());
-            throw new RuntimeException("Không thể xác thực với Google: " + e.getMessage());
-        }
+        // Tạo token mới
+        String tokenString = UUID.randomUUID().toString();
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .token(tokenString)
+                .user(user)
+                .expiresAt(LocalDateTime.now().plusMinutes(15))
+                .build();
+
+        passwordResetTokenRepository.save(resetToken);
+
+        // Gửi email
+        emailService.sendPasswordResetEmail(user.getEmail(), tokenString);
     }
+
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(request.getToken())
+                .orElseThrow(() -> new RuntimeException("Link đặt lại mật khẩu không hợp lệ."));
+
+        if (resetToken.getUsed()) {
+            throw new RuntimeException("Link đặt lại mật khẩu đã được sử dụng.");
+        }
+
+        if (resetToken.isExpired()) {
+            throw new RuntimeException("Link đặt lại mật khẩu đã hết hạn.");
+        }
+
+        User user = resetToken.getUser();
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        resetToken.setUsed(true);
+        passwordResetTokenRepository.save(resetToken);
+
+        log.info("User {} đã đặt lại mật khẩu thành công.", user.getEmail());
+    }
+
+    // ─── Private Helpers ────────────────────────────────────────────────────────
 
     private User createGoogleUser(String email) {
         // Tự tạo username từ email prefix (ví dụ: "nguyenvana@gmail.com" →

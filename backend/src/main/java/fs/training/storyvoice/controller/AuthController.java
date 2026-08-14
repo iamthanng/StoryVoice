@@ -1,8 +1,10 @@
 package fs.training.storyvoice.controller;
 
+import fs.training.storyvoice.dto.request.ForgotPasswordRequest;
 import fs.training.storyvoice.dto.request.GoogleLoginRequest;
 import fs.training.storyvoice.dto.request.LoginRequest;
 import fs.training.storyvoice.dto.request.RegisterRequest;
+import fs.training.storyvoice.dto.request.ResetPasswordRequest;
 import fs.training.storyvoice.dto.response.ApiResponse;
 import fs.training.storyvoice.dto.response.AuthResponse;
 import fs.training.storyvoice.dto.response.UserResponse;
@@ -61,12 +63,28 @@ public class AuthController {
      *   1. Dùng @react-oauth/google: const { credential } = useGoogleLogin()
      *   2. Gọi: POST /api/auth/google với { idToken: credential }
      */
-    @Operation(summary = "Đăng nhập bằng Google OAuth2")
+    @Operation(summary = "Đăng nhập bằng Google OAuth2 (Access Token flow)")
     @PostMapping("/google")
     public ResponseEntity<ApiResponse<AuthResponse>> googleLogin(
             @Valid @RequestBody GoogleLoginRequest request) {
         AuthResponse authResponse = authService.loginWithGoogle(request);
         return ResponseEntity.ok(ApiResponse.success("Đăng nhập Google thành công", authResponse));
+    }
+
+    @Operation(summary = "Yêu cầu đặt lại mật khẩu")
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request);
+        return ResponseEntity.ok(ApiResponse.success("Nếu email tồn tại, link đặt lại mật khẩu đã được gửi.", null));
+    }
+
+    @Operation(summary = "Đặt lại mật khẩu mới")
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok(ApiResponse.success("Mật khẩu đã được đặt lại thành công.", null));
     }
 
     /**
