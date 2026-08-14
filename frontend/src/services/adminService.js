@@ -25,6 +25,9 @@ export const adminUploadCover = (id, file) => {
 export const adminGetChapters = (storyId) =>
   api.get(`/admin/chapters/story/${storyId}`);
 
+export const adminGetChapterById = (id) =>
+  api.get(`/admin/chapters/${id}`);
+
 export const adminCreateChapter = (data) =>
   api.post('/admin/chapters', data);
 
@@ -52,6 +55,18 @@ export const adminSetVip = (id, isVip) =>
 // Genres & Authors (for dropdowns) - match backend: /api/genres, /api/authors
 export const getGenres = () => api.get('/genres');
 export const getAuthors = () => api.get('/authors');
+
+// Admin Genres
+export const adminGetGenres = () => api.get('/admin/genres');
+export const adminCreateGenre = (data) => api.post('/admin/genres', data);
+export const adminUpdateGenre = (id, data) => api.put(`/admin/genres/${id}`, data);
+export const adminDeleteGenre = (id) => api.delete(`/admin/genres/${id}`);
+
+// Admin Authors
+export const adminGetAuthors = () => api.get('/admin/authors');
+export const adminCreateAuthor = (data) => api.post('/admin/authors', data);
+export const adminUpdateAuthor = (id, data) => api.put(`/admin/authors/${id}`, data);
+export const adminDeleteAuthor = (id) => api.delete(`/admin/authors/${id}`);
 
 // Dashboard stats
 export const getDashboardStats = () => api.get('/admin/dashboard/stats');

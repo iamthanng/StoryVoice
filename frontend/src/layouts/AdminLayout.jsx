@@ -6,6 +6,8 @@ const AdminLayout = () => {
   const navItems = [
     { to: '/admin', label: '📊 Dashboard', end: true },
     { to: '/admin/stories', label: '📚 Quản lý Truyện' },
+    { to: '/admin/genres', label: '🏷️ Quản lý Thể loại' },
+    { to: '/admin/authors', label: '✍️ Quản lý Tác giả' },
     { to: '/admin/users', label: '👥 Quản lý Người dùng' },
   ];
 

@@ -23,6 +23,8 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminStories from './pages/admin/AdminStories';
 import AdminChapters from './pages/admin/AdminChapters';
 import AdminUsers from './pages/admin/AdminUsers';
+import AdminGenres from './pages/admin/AdminGenres';
+import AdminAuthors from './pages/admin/AdminAuthors';
 
 function App() {
   return (
@@ -52,6 +54,8 @@ function App() {
               <Route index element={<AdminDashboard />} />
               <Route path="stories" element={<AdminStories />} />
               <Route path="stories/:storyId/chapters" element={<AdminChapters />} />
+              <Route path="genres" element={<AdminGenres />} />
+              <Route path="authors" element={<AdminAuthors />} />
               <Route path="users" element={<AdminUsers />} />
             </Route>
           </Routes>
