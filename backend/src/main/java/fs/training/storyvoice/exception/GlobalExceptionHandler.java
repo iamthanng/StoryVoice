@@ -4,6 +4,7 @@ import fs.training.storyvoice.dto.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import fs.training.storyvoice.exception.AppException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
@@ -45,10 +46,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(ApiResponse.error("Bạn không có quyền thực hiện thao tác này"));
+                .body(ApiResponse.error(ex.getMessage()));
     }
 
-    // Lỗi nghiệp vụ từ Service (Resource không tìm thấy, xung đột dữ liệu, ...)
+    // Lỗi tùy chỉnh (AppException)
+    @ExceptionHandler(AppException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAppException(AppException ex) {
+        HttpStatus status = ex.getErrorCode() != null ? ex.getErrorCode().getHttpStatus() : HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status)
+                .body(ApiResponse.error(ex.getMessage(), ex.getErrorCode() != null ? ex.getErrorCode().name() : null));
+    }
+
+    // Lỗi nghiệp vụ từ Service
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException ex) {
         log.error("Runtime error: {}", ex.getMessage(), ex);

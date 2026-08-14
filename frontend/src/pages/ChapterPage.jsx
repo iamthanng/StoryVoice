@@ -63,8 +63,8 @@ const ChapterPage = () => {
       setChapters(chaptersListRes.data.data || []);
     } catch (err) {
       if (err.response?.status === 403 || err.response?.status === 401) {
-        const msg = err.response?.data?.message || '';
-        const level = msg.toUpperCase().includes('VIP') ? 'VIP' : 'MEMBER';
+        const errorCode = err.response?.data?.errorCode;
+        const level = errorCode === 'VIP_REQUIRED' ? 'VIP' : 'MEMBER';
         setAccessDenied(level);
       }
     } finally {

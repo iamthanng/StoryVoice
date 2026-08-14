@@ -32,6 +32,7 @@ public class ApiResponse<T> {
 
     private boolean success;
     private String message;
+    private String errorCode;
     private T data;
 
     @Builder.Default
@@ -54,6 +55,14 @@ public class ApiResponse<T> {
         return ApiResponse.<T>builder()
                 .success(false)
                 .message(message)
+                .build();
+    }
+
+    public static <T> ApiResponse<T> error(String message, String errorCode) {
+        return ApiResponse.<T>builder()
+                .success(false)
+                .message(message)
+                .errorCode(errorCode)
                 .build();
     }
 }

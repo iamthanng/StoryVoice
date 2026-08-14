@@ -22,6 +22,6 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler {
         log.error("Lỗi từ chối truy cập (403 Forbidden): {}", accessDeniedException.getMessage());
         response.setContentType("application/json;charset=UTF-8");
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-        response.getWriter().write("{\"success\":false,\"status\":403,\"message\":\"Bạn không có quyền truy cập tài nguyên này\"}");
+        response.getWriter().write("{\"success\":false,\"status\":403,\"message\":\"" + accessDeniedException.getMessage() + "\"}");
     }
 }

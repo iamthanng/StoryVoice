@@ -1,11 +1,12 @@
 package fs.training.storyvoice.service;
 
+import fs.training.storyvoice.exception.AppException;
 import fs.training.storyvoice.entity.Chapter;
 import fs.training.storyvoice.enums.AccessLevel;
+import fs.training.storyvoice.enums.ErrorCode;
 import fs.training.storyvoice.enums.UserRole;
 import fs.training.storyvoice.security.UserPrincipal;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -76,12 +77,12 @@ public class AccessControlService {
     public void checkAccess(UserPrincipal currentUser, Chapter chapter) {
         if (!canAccessChapter(currentUser, chapter)) {
             if (currentUser == null) {
-                throw new AccessDeniedException("Chương '" + chapter.getTitle() + "' yêu cầu đăng nhập để đọc/nghe");
+                throw new AppException("Chương '" + chapter.getTitle() + "' yêu cầu đăng nhập để đọc/nghe", ErrorCode.LOGIN_REQUIRED);
             }
             if (chapter.getAccessLevel() == AccessLevel.VIP) {
-                throw new AccessDeniedException("Chương '" + chapter.getTitle() + "' yêu cầu tài khoản VIP. Vui lòng nâng cấp VIP!");
+                throw new AppException("Chương '" + chapter.getTitle() + "' yêu cầu tài khoản VIP. Vui lòng nâng cấp VIP!", ErrorCode.VIP_REQUIRED);
             }
-            throw new AccessDeniedException("Bạn không có quyền truy cập chương này");
+            throw new AppException("Bạn không có quyền truy cập chương này", ErrorCode.ACCESS_DENIED);
         }
     }
 }
