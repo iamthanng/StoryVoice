@@ -265,9 +265,36 @@ const AdminStories = () => {
                   className="w-full bg-background border border-gray-700 rounded-lg px-3 py-2 text-textPrimary focus:outline-none focus:border-primary text-sm resize-none" />
               </div>
               <div>
-                <label className="block text-textSecondary text-xs mb-1 uppercase tracking-wide">Ảnh bìa (tuỳ chọn)</label>
+                <label className="block text-textSecondary text-xs mb-1 uppercase tracking-wide">Ảnh bìa</label>
+
+                <div className="flex gap-4 items-start mb-3">
+                  {/* Ảnh bìa hiện tại */}
+                  {editing?.coverImage && !coverFile && (
+                    <div className="flex flex-col items-center gap-1">
+                      <p className="text-xs text-textSecondary">Hiện tại:</p>
+                      <img
+                        src={getMediaUrl(editing.coverImage)}
+                        alt="Ảnh bìa hiện tại"
+                        className="w-20 h-28 object-cover rounded-lg border border-gray-700 shadow"
+                      />
+                    </div>
+                  )}
+                  {/* Preview file mới được chọn */}
+                  {coverFile && (
+                    <div className="flex flex-col items-center gap-1">
+                      <p className="text-xs text-blue-400">Ảnh mới:</p>
+                      <img
+                        src={URL.createObjectURL(coverFile)}
+                        alt="Ảnh bìa mới"
+                        className="w-20 h-28 object-cover rounded-lg border border-blue-500/50 shadow"
+                      />
+                    </div>
+                  )}
+                </div>
+
                 <input type="file" accept="image/*" onChange={(e) => setCoverFile(e.target.files[0])}
                   className="text-sm text-textSecondary file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:bg-primary/20 file:text-primary cursor-pointer" />
+                {editing?.coverImage && <p className="text-xs text-textSecondary mt-1">Chọn file mới sẽ thay thế ảnh bìa cũ.</p>}
               </div>
               {msg && <p className={`text-sm ${msg.startsWith('✅') ? 'text-green-400' : 'text-red-400'}`}>{msg}</p>}
               <div className="flex justify-end gap-3 pt-2">

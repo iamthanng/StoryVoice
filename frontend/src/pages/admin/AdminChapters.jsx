@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
-  adminGetChapters, adminCreateChapter, adminUpdateChapter,
+  adminGetChapters, adminGetChapterById, adminCreateChapter, adminUpdateChapter,
   adminDeleteChapter, adminUploadAudio,
 } from '../../services/adminService';
+import { getMediaUrl } from '../../utils/urlHelper';
 
 const ACCESS_OPTIONS = [
   { value: 'PUBLIC', label: 'Công khai', color: 'text-green-400' },
@@ -48,10 +49,27 @@ const AdminChapters = () => {
     setAudioFile(null); setMsg(''); setShowForm(true);
   };
 
-  const openEdit = (c) => {
-    setEditing(c);
-    setForm({ title: c.title, content: c.content || '', chapterNumber: String(c.chapterNumber), accessLevel: c.accessLevel, storyId });
-    setAudioFile(null); setMsg(''); setShowForm(true);
+  const openEdit = async (c) => {
+    setMsg('');
+    setAudioFile(null);
+    // Lấy nội dung đầy đủ của chương từ API (danh sách không chứa content)
+    try {
+      const res = await adminGetChapterById(c.id);
+      const full = res.data.data;
+      setEditing(full);
+      setForm({
+        title: full.title,
+        content: full.content || '',
+        chapterNumber: String(full.chapterNumber),
+        accessLevel: full.accessLevel,
+        storyId,
+      });
+    } catch {
+      // Fallback: dùng dữ liệu có sẵn nếu API lỗi
+      setEditing(c);
+      setForm({ title: c.title, content: c.content || '', chapterNumber: String(c.chapterNumber), accessLevel: c.accessLevel, storyId });
+    }
+    setShowForm(true);
   };
 
   const handleSave = async (e) => {
@@ -235,9 +253,37 @@ const AdminChapters = () => {
                   className="w-full bg-background border border-gray-700 rounded-lg px-3 py-2 text-textPrimary focus:outline-none focus:border-primary text-sm resize-none font-mono leading-relaxed" />
               </div>
               <div>
-                <label className="block text-textSecondary text-xs mb-1 uppercase">Upload Audio có sẵn (tuỳ chọn)</label>
+                <label className="block text-textSecondary text-xs mb-1 uppercase">Audio</label>
+
+                {/* Hiện audio player nếu chương đã có audio */}
+                {editing?.hasAudio && editing?.audioUrl && !audioFile && (
+                  <div className="mb-3 p-3 rounded-lg bg-gray-900/60 border border-green-500/30">
+                    <p className="text-xs text-green-400 font-semibold mb-2">🎵 Audio hiện tại:</p>
+                    <audio
+                      controls
+                      src={getMediaUrl(editing.audioUrl)}
+                      className="w-full h-9"
+                      style={{ accentColor: '#f97316' }}
+                    />
+                  </div>
+                )}
+
+                {/* File mới được chọn → preview luôn */}
+                {audioFile && (
+                  <div className="mb-3 p-3 rounded-lg bg-gray-900/60 border border-blue-500/30">
+                    <p className="text-xs text-blue-400 font-semibold mb-2">🎵 File mới đã chọn: {audioFile.name}</p>
+                    <audio
+                      controls
+                      src={URL.createObjectURL(audioFile)}
+                      className="w-full h-9"
+                      style={{ accentColor: '#f97316' }}
+                    />
+                  </div>
+                )}
+
                 <input type="file" accept="audio/*" onChange={(e) => setAudioFile(e.target.files[0])}
                   className="text-sm text-textSecondary file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:bg-primary/20 file:text-primary cursor-pointer" />
+                <p className="text-xs text-textSecondary mt-1">Chọn file mới sẽ thay thế audio cũ.</p>
               </div>
               {msg && <p className={`text-sm ${msg.startsWith('✅') ? 'text-green-400' : 'text-red-400'}`}>{msg}</p>}
               <div className="flex justify-end gap-3 pt-2">
