@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { adminGetGenres, adminCreateGenre, adminUpdateGenre, adminDeleteGenre } from '../../services/adminService';
+import { useTranslation } from 'react-i18next';
 
 const emptyForm = { name: '', description: '' };
 
@@ -16,6 +17,9 @@ const AdminGenres = () => {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const { t } = useTranslation();
 
   const fetchGenres = () => {
     setLoading(true);
@@ -31,6 +35,7 @@ const AdminGenres = () => {
     setEditing(null);
     setForm(emptyForm);
     setMsg('');
+    setFieldErrors({});
     setShowForm(true);
   };
 
@@ -38,6 +43,7 @@ const AdminGenres = () => {
     setEditing(g);
     setForm({ name: g.name, description: g.description || '' });
     setMsg('');
+    setFieldErrors({});
     setShowForm(true);
   };
 
@@ -45,6 +51,7 @@ const AdminGenres = () => {
     e.preventDefault();
     setSaving(true);
     setMsg('');
+    setFieldErrors({});
     try {
       if (editing) {
         await adminUpdateGenre(editing.id, form);
@@ -53,9 +60,14 @@ const AdminGenres = () => {
       }
       setMsg('✅ Lưu thành công!');
       fetchGenres();
-      setTimeout(() => { setShowForm(false); setMsg(''); }, 800);
+      setTimeout(() => { setShowForm(false); setMsg(''); setFieldErrors({}); }, 800);
     } catch (err) {
-      setMsg('❌ ' + (err.response?.data?.message || 'Có lỗi xảy ra.'));
+      if (err.errorCode === 'VALIDATION_FAILED' && err.fieldErrors) {
+        setFieldErrors(err.fieldErrors);
+        setMsg('❌ Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.');
+      } else {
+        setMsg('❌ ' + (err.errorCode ? t(`errors.${err.errorCode}`) : err.message));
+      }
     } finally {
       setSaving(false);
     }
@@ -138,8 +150,9 @@ const AdminGenres = () => {
             <form onSubmit={handleSave} className="p-6 space-y-4">
               <div>
                 <label className="block text-textSecondary text-xs mb-1 uppercase">Tên thể loại *</label>
-                <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
                   className="w-full bg-background border border-gray-700 rounded-lg px-3 py-2 text-textPrimary focus:outline-none focus:border-primary text-sm" />
+                {fieldErrors.name && <p className="text-red-500 text-xs mt-1">{t(`errors.${fieldErrors.name}`)}</p>}
               </div>
               <div>
                 <label className="block text-textSecondary text-xs mb-1 uppercase">Mô tả</label>

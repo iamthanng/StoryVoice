@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { useTranslation } from 'react-i18next';
 
 const ResetPasswordPage = () => {
   const [searchParams] = useSearchParams();
@@ -13,9 +14,13 @@ const ResetPasswordPage = () => {
   const [msg, setMsg] = useState('');
   const [isError, setIsError] = useState(false);
   const [done, setDone] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const { t } = useTranslation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setFieldErrors({});
     if (password !== confirm) {
       setIsError(true);
       setMsg('Mật khẩu xác nhận không khớp.');
@@ -36,7 +41,12 @@ const ResetPasswordPage = () => {
       setTimeout(() => navigate('/login'), 2500);
     } catch (err) {
       setIsError(true);
-      setMsg(err.response?.data?.message || 'Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.');
+      if (err.errorCode === 'VALIDATION_FAILED' && err.fieldErrors) {
+        setFieldErrors(err.fieldErrors);
+        setMsg('Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.');
+      } else {
+        setMsg(err.errorCode ? t(`errors.${err.errorCode}`) : (err.message || 'Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.'));
+      }
     } finally {
       setLoading(false);
     }
@@ -76,12 +86,14 @@ const ResetPasswordPage = () => {
               <label className="block text-textSecondary text-sm mb-1">Mật khẩu mới</label>
               <input
                 type="password"
-                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Tối thiểu 6 ký tự"
                 className="w-full bg-background border border-gray-700 rounded-lg px-4 py-2.5 text-textPrimary focus:outline-none focus:border-primary transition-colors"
               />
+              {fieldErrors.newPassword && (
+                <p className="text-red-500 text-xs mt-1">{t(`errors.${fieldErrors.newPassword}`)}</p>
+              )}
             </div>
             <div>
               <label className="block text-textSecondary text-sm mb-1">Xác nhận mật khẩu</label>

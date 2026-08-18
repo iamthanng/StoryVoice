@@ -1,24 +1,34 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import { useTranslation } from 'react-i18next';
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
   const [isError, setIsError] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const { t } = useTranslation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMsg('');
+    setFieldErrors({});
     try {
       await api.post('/auth/forgot-password', { email });
       setIsError(false);
       setMsg('✅ Email đặt lại mật khẩu đã được gửi! Vui lòng kiểm tra hộp thư (kể cả Spam).');
     } catch (err) {
       setIsError(true);
-      setMsg(err.response?.data?.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
+      if (err.errorCode === 'VALIDATION_FAILED' && err.fieldErrors) {
+        setFieldErrors(err.fieldErrors);
+        setMsg('Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.');
+      } else {
+        setMsg(err.errorCode ? t(`errors.${err.errorCode}`) : err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -47,12 +57,14 @@ const ForgotPasswordPage = () => {
               <label className="block text-textSecondary text-sm mb-1">Địa chỉ Email</label>
               <input
                 type="email"
-                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="example@gmail.com"
                 className="w-full bg-background border border-gray-700 rounded-lg px-4 py-2.5 text-textPrimary focus:outline-none focus:border-primary transition-colors"
               />
+              {fieldErrors.email && (
+                <p className="text-red-500 text-xs mt-1">{t(`errors.${fieldErrors.email}`)}</p>
+              )}
             </div>
             <button
               type="submit"

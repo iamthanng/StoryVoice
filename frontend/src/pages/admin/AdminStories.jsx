@@ -5,6 +5,7 @@ import {
   adminDeleteStory, adminUploadCover, getGenres, getAuthors,
 } from '../../services/adminService';
 import { getMediaUrl } from '../../utils/urlHelper';
+import { useTranslation } from 'react-i18next';
 
 const emptyForm = { title: '', description: '', authorId: '', genreId: '', status: 'ONGOING' };
 
@@ -26,6 +27,9 @@ const AdminStories = () => {
   const [coverFile, setCoverFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const { t } = useTranslation();
 
   const fetchStories = (searchParams = {}) => {
     setLoading(true);
@@ -64,12 +68,13 @@ const AdminStories = () => {
     fetchStories({ keyword: '', genreId: '', authorId: '' });
   };
 
-  const openCreate = () => { setEditing(null); setForm(emptyForm); setCoverFile(null); setMsg(''); setShowForm(true); };
+  const openCreate = () => { setEditing(null); setForm(emptyForm); setCoverFile(null); setMsg(''); setFieldErrors({}); setShowForm(true); };
   const openEdit = (s) => {
     setEditing(s);
     setForm({ title: s.title, description: s.description || '', authorId: s.authorId || '', genreId: s.genreId || '', status: s.status });
     setCoverFile(null);
     setMsg('');
+    setFieldErrors({});
     setShowForm(true);
   };
   const closeForm = () => setShowForm(false);
@@ -78,6 +83,7 @@ const AdminStories = () => {
     e.preventDefault();
     setSaving(true);
     setMsg('');
+    setFieldErrors({});
     try {
       let id = editing?.id;
       if (editing) {
@@ -91,9 +97,14 @@ const AdminStories = () => {
       }
       setMsg('✅ Lưu thành công!');
       fetchStories();
-      setTimeout(() => { setShowForm(false); setMsg(''); }, 800);
+      setTimeout(() => { setShowForm(false); setMsg(''); setFieldErrors({}); }, 800);
     } catch (err) {
-      setMsg('❌ ' + (err.response?.data?.message || 'Có lỗi xảy ra.'));
+      if (err.errorCode === 'VALIDATION_FAILED' && err.fieldErrors) {
+        setFieldErrors(err.fieldErrors);
+        setMsg('❌ Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.');
+      } else {
+        setMsg('❌ ' + (err.errorCode ? t(`errors.${err.errorCode}`) : err.message));
+      }
     } finally {
       setSaving(false);
     }
@@ -230,8 +241,9 @@ const AdminStories = () => {
             <form onSubmit={handleSave} className="p-6 space-y-4">
               <div>
                 <label className="block text-textSecondary text-xs mb-1 uppercase tracking-wide">Tên truyện *</label>
-                <input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
+                <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
                   className="w-full bg-background border border-gray-700 rounded-lg px-3 py-2 text-textPrimary focus:outline-none focus:border-primary text-sm" />
+                {fieldErrors.title && <p className="text-red-500 text-xs mt-1">{t(`errors.${fieldErrors.title}`)}</p>}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -241,6 +253,7 @@ const AdminStories = () => {
                     <option value="">-- Chọn tác giả --</option>
                     {authors.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                   </select>
+                  {fieldErrors.authorId && <p className="text-red-500 text-xs mt-1">{t(`errors.${fieldErrors.authorId}`)}</p>}
                 </div>
                 <div>
                   <label className="block text-textSecondary text-xs mb-1 uppercase tracking-wide">Thể loại</label>
@@ -249,6 +262,7 @@ const AdminStories = () => {
                     <option value="">-- Chọn thể loại --</option>
                     {genres.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
                   </select>
+                  {fieldErrors.genreId && <p className="text-red-500 text-xs mt-1">{t(`errors.${fieldErrors.genreId}`)}</p>}
                 </div>
               </div>
               <div>
@@ -263,6 +277,7 @@ const AdminStories = () => {
                 <label className="block text-textSecondary text-xs mb-1 uppercase tracking-wide">Mô tả</label>
                 <textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
                   className="w-full bg-background border border-gray-700 rounded-lg px-3 py-2 text-textPrimary focus:outline-none focus:border-primary text-sm resize-none" />
+                {fieldErrors.description && <p className="text-red-500 text-xs mt-1">{t(`errors.${fieldErrors.description}`)}</p>}
               </div>
               <div>
                 <label className="block text-textSecondary text-xs mb-1 uppercase tracking-wide">Ảnh bìa</label>

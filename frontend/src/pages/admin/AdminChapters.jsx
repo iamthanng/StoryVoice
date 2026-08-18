@@ -5,6 +5,7 @@ import {
   adminDeleteChapter, adminUploadAudio,
 } from '../../services/adminService';
 import { getMediaUrl } from '../../utils/urlHelper';
+import { useTranslation } from 'react-i18next';
 
 const ACCESS_OPTIONS = [
   { value: 'PUBLIC', label: 'Công khai', color: 'text-green-400' },
@@ -31,6 +32,9 @@ const AdminChapters = () => {
   const [audioFile, setAudioFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const { t } = useTranslation();
 
   const fetchChapters = () => {
     setLoading(true);
@@ -46,11 +50,12 @@ const AdminChapters = () => {
     const nextNum = chapters.length > 0 ? Math.max(...chapters.map((c) => c.chapterNumber || 0)) + 1 : 1;
     setEditing(null);
     setForm({ ...emptyForm, storyId, chapterNumber: String(nextNum) });
-    setAudioFile(null); setMsg(''); setShowForm(true);
+    setAudioFile(null); setMsg(''); setFieldErrors({}); setShowForm(true);
   };
 
   const openEdit = async (c) => {
     setMsg('');
+    setFieldErrors({});
     setAudioFile(null);
     // Lấy nội dung đầy đủ của chương từ API (danh sách không chứa content)
     try {
@@ -74,7 +79,7 @@ const AdminChapters = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    setSaving(true); setMsg('');
+    setSaving(true); setMsg(''); setFieldErrors({});
     try {
       let id = editing?.id;
       const payload = { ...form, chapterNumber: parseInt(form.chapterNumber), storyId: parseInt(storyId) };
@@ -89,9 +94,14 @@ const AdminChapters = () => {
       }
       setMsg('✅ Lưu thành công!');
       fetchChapters();
-      setTimeout(() => { setShowForm(false); setMsg(''); }, 800);
+      setTimeout(() => { setShowForm(false); setMsg(''); setFieldErrors({}); }, 800);
     } catch (err) {
-      setMsg('❌ ' + (err.response?.data?.message || 'Có lỗi xảy ra.'));
+      if (err.errorCode === 'VALIDATION_FAILED' && err.fieldErrors) {
+        setFieldErrors(err.fieldErrors);
+        setMsg('❌ Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.');
+      } else {
+        setMsg('❌ ' + (err.errorCode ? t(`errors.${err.errorCode}`) : err.message));
+      }
     } finally {
       setSaving(false);
     }
@@ -230,8 +240,9 @@ const AdminChapters = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-textSecondary text-xs mb-1 uppercase">Số chương</label>
-                  <input type="number" required value={form.chapterNumber} onChange={(e) => setForm({ ...form, chapterNumber: e.target.value })}
+                  <input type="number" value={form.chapterNumber} onChange={(e) => setForm({ ...form, chapterNumber: e.target.value })}
                     className="w-full bg-background border border-gray-700 rounded-lg px-3 py-2 text-textPrimary focus:outline-none focus:border-primary text-sm" />
+                  {fieldErrors.chapterNumber && <p className="text-red-500 text-xs mt-1">{t(`errors.${fieldErrors.chapterNumber}`)}</p>}
                 </div>
                 <div>
                   <label className="block text-textSecondary text-xs mb-1 uppercase">Quyền truy cập</label>
@@ -243,14 +254,16 @@ const AdminChapters = () => {
               </div>
               <div>
                 <label className="block text-textSecondary text-xs mb-1 uppercase">Tiêu đề chương *</label>
-                <input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
+                <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
                   className="w-full bg-background border border-gray-700 rounded-lg px-3 py-2 text-textPrimary focus:outline-none focus:border-primary text-sm" />
+                {fieldErrors.title && <p className="text-red-500 text-xs mt-1">{t(`errors.${fieldErrors.title}`)}</p>}
               </div>
               <div>
                 <label className="block text-textSecondary text-xs mb-1 uppercase">Nội dung chương</label>
                 <textarea rows={10} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })}
                   placeholder="Nhập nội dung chương truyện..."
                   className="w-full bg-background border border-gray-700 rounded-lg px-3 py-2 text-textPrimary focus:outline-none focus:border-primary text-sm resize-none font-mono leading-relaxed" />
+                {fieldErrors.content && <p className="text-red-500 text-xs mt-1">{t(`errors.${fieldErrors.content}`)}</p>}
               </div>
               <div>
                 <label className="block text-textSecondary text-xs mb-1 uppercase">Audio</label>
