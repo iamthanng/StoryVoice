@@ -1,5 +1,8 @@
-package fs.training.storyvoice.service;
+package fs.training.storyvoice.service.impl;
 
+import fs.training.storyvoice.service.TextToSpeechService;
+import fs.training.storyvoice.exception.AppException;
+import fs.training.storyvoice.enums.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -15,7 +18,7 @@ import java.util.Map;
  */
 @Slf4j
 @Service
-public class ElevenLabsTtsService {
+public class ElevenLabsTextToSpeechServiceImpl implements TextToSpeechService {
 
     @Value("${app.tts.elevenlabs.api-key}")
     private String apiKey;
@@ -28,7 +31,7 @@ public class ElevenLabsTtsService {
 
     private final RestTemplate restTemplate;
 
-    public ElevenLabsTtsService() {
+    public ElevenLabsTextToSpeechServiceImpl() {
         this.restTemplate = new RestTemplate();
     }
 
@@ -41,7 +44,7 @@ public class ElevenLabsTtsService {
      */
     public byte[] generateSpeech(String text, String customVoiceId) {
         if (text == null || text.isBlank()) {
-            throw new RuntimeException("Nội dung văn bản để tạo giọng đọc không được để trống");
+            throw new AppException(ErrorCode.TTS_TEXT_EMPTY);
         }
 
         if ("YOUR_ELEVENLABS_API_KEY".equals(apiKey)) {
@@ -76,11 +79,11 @@ public class ElevenLabsTtsService {
                 log.info("Gọi ElevenLabs TTS thành công, nhận về {} bytes audio MP3", response.getBody().length);
                 return response.getBody();
             } else {
-                throw new RuntimeException("ElevenLabs API trả về mã lỗi: " + response.getStatusCode());
+                throw new AppException(ErrorCode.TTS_API_FAILED);
             }
         } catch (Exception ex) {
             log.error("Lỗi khi gọi ElevenLabs TTS API: {}", ex.getMessage(), ex);
-            throw new RuntimeException("Lỗi khi sinh giọng đọc từ ElevenLabs API: " + ex.getMessage(), ex);
+            throw new AppException(ErrorCode.TTS_API_FAILED);
         }
     }
 
