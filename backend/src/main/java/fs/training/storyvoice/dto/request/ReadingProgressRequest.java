@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 public class ReadingProgressRequest {
 
-    @NotNull(message = "ID chương không được để trống")
+    @NotNull(message = "FIELD_REQUIRED")
     private Long chapterId;
 
     /**

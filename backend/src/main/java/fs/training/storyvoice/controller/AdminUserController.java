@@ -6,6 +6,8 @@ import fs.training.storyvoice.entity.User;
 import fs.training.storyvoice.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import fs.training.storyvoice.exception.AppException;
+import fs.training.storyvoice.enums.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -49,7 +51,7 @@ public class AdminUserController {
             @RequestParam boolean grant) {
 
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với ID: " + id));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         user.setIsVip(grant);
         userRepository.save(user);

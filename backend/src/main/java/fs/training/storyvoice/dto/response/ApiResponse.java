@@ -65,4 +65,13 @@ public class ApiResponse<T> {
                 .errorCode(errorCode)
                 .build();
     }
+
+    public static <T> ApiResponse<T> error(String message, String errorCode, T data) {
+        return ApiResponse.<T>builder()
+                .success(false)
+                .message(message)
+                .errorCode(errorCode)
+                .data(data)
+                .build();
+    }
 }

@@ -7,8 +7,8 @@ import lombok.Data;
 @Data
 public class AuthorRequest {
 
-    @NotBlank(message = "Tên tác giả không được để trống")
-    @Size(max = 100, message = "Tên tác giả không được vượt quá 100 ký tự")
+    @NotBlank(message = "FIELD_REQUIRED")
+    @Size(max = 100, message = "FIELD_TOO_LONG")
     private String name;
 
     private String bio;

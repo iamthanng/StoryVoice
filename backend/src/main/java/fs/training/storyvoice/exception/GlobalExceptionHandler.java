@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import fs.training.storyvoice.exception.AppException;
+import fs.training.storyvoice.enums.ErrorCode;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
@@ -32,44 +33,47 @@ public class GlobalExceptionHandler {
             String message = error.getDefaultMessage();
             errors.put(fieldName, message);
         });
-        return ResponseEntity.badRequest().body(ApiResponse.error("Dữ liệu đầu vào không hợp lệ"));
+        return ResponseEntity.badRequest().body(ApiResponse.error(ErrorCode.VALIDATION_FAILED.getMessage(), ErrorCode.VALIDATION_FAILED.name(), errors));
     }
 
     // Lỗi sai username/password khi đăng nhập
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadCredentials(BadCredentialsException ex) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(ApiResponse.error("Username hoặc password không chính xác"));
+        return ResponseEntity.status(ErrorCode.INVALID_CREDENTIALS.getHttpStatus())
+                .body(ApiResponse.error(ErrorCode.INVALID_CREDENTIALS.getMessage(), ErrorCode.INVALID_CREDENTIALS.name()));
     }
 
     // Lỗi không đủ quyền (403)
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(ApiResponse.error(ex.getMessage()));
+        return ResponseEntity.status(ErrorCode.ACCESS_DENIED.getHttpStatus())
+                .body(ApiResponse.error(ErrorCode.ACCESS_DENIED.getMessage(), ErrorCode.ACCESS_DENIED.name()));
     }
 
     // Lỗi tùy chỉnh (AppException)
     @ExceptionHandler(AppException.class)
     public ResponseEntity<ApiResponse<Void>> handleAppException(AppException ex) {
-        HttpStatus status = ex.getErrorCode() != null ? ex.getErrorCode().getHttpStatus() : HttpStatus.BAD_REQUEST;
+        ErrorCode errorCode = ex.getErrorCode();
+        HttpStatus status = errorCode != null ? errorCode.getHttpStatus() : HttpStatus.BAD_REQUEST;
+        
+        // Luôn trả về message từ Exception (hoặc fallback về ErrorCode) và tên của ErrorCode (ví dụ "USER_NOT_FOUND")
         return ResponseEntity.status(status)
-                .body(ApiResponse.error(ex.getMessage(), ex.getErrorCode() != null ? ex.getErrorCode().name() : null));
+                .body(ApiResponse.error(ex.getMessage(), errorCode != null ? errorCode.name() : null));
     }
 
-    // Lỗi nghiệp vụ từ Service
+    // Lỗi nghiệp vụ từ Service (những chỗ chưa kịp refactor sang AppException)
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException ex) {
         log.error("Runtime error: {}", ex.getMessage(), ex);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(ex.getMessage()));
+                .body(ApiResponse.error(ex.getMessage(), ErrorCode.UNCATEGORIZED_EXCEPTION.name()));
     }
 
     // Lỗi không xác định
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
         log.error("Unexpected error: {}", ex.getMessage(), ex);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("Có lỗi xảy ra, vui lòng thử lại sau"));
+        return ResponseEntity.status(ErrorCode.UNCATEGORIZED_EXCEPTION.getHttpStatus())
+                .body(ApiResponse.error(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage(), ErrorCode.UNCATEGORIZED_EXCEPTION.name()));
     }
 }

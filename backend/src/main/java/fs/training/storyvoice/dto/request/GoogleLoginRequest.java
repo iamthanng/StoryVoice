@@ -8,12 +8,12 @@ import lombok.Data;
 public class GoogleLoginRequest {
 
     /** Access Token từ Google (Authorization Code flow / Implicit flow) */
-    @NotBlank(message = "Access Token không được để trống")
+    @NotBlank(message = "FIELD_REQUIRED")
     private String accessToken;
 
     /** Email lấy từ Google userinfo (đã verify phía client) */
-    @NotBlank
-    @Email
+    @NotBlank(message = "FIELD_REQUIRED")
+    @Email(message = "EMAIL_INVALID")
     private String email;
 
     /** Tên hiển thị từ Google */

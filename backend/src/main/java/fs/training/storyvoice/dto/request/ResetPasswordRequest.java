@@ -7,10 +7,10 @@ import lombok.Data;
 @Data
 public class ResetPasswordRequest {
 
-    @NotBlank(message = "Token không được để trống")
+    @NotBlank(message = "FIELD_REQUIRED")
     private String token;
 
-    @NotBlank(message = "Mật khẩu mới không được để trống")
-    @Size(min = 6, message = "Mật khẩu phải có ít nhất 6 ký tự")
+    @NotBlank(message = "FIELD_REQUIRED")
+    @Size(min = 6, message = "FIELD_TOO_SHORT")
     private String newPassword;
 }

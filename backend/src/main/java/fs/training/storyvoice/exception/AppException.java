@@ -5,14 +5,14 @@ import lombok.Getter;
 
 /**
  * Exception tùy chỉnh dành riêng cho ứng dụng StoryVoice.
- * Hỗ trợ truyền thêm errorCode để Frontend dễ dàng bắt lỗi.
+ * Hỗ trợ truyền ErrorCode để bắt lỗi và hỗ trợ đa ngôn ngữ ở frontend.
  */
 @Getter
 public class AppException extends RuntimeException {
     private final ErrorCode errorCode;
 
-    public AppException(String message, ErrorCode errorCode) {
-        super(message);
+    public AppException(ErrorCode errorCode) {
+        super(errorCode.getMessage());
         this.errorCode = errorCode;
     }
 }

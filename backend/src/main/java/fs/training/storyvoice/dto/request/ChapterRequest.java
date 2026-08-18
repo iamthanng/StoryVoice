@@ -9,19 +9,19 @@ import lombok.Data;
 @Data
 public class ChapterRequest {
 
-    @NotNull(message = "ID truyện không được để trống")
+    @NotNull(message = "FIELD_REQUIRED")
     private Long storyId;
 
-    @NotBlank(message = "Tiêu đề chương không được để trống")
-    @Size(max = 200, message = "Tiêu đề chương không được vượt quá 200 ký tự")
+    @NotBlank(message = "FIELD_REQUIRED")
+    @Size(max = 200, message = "FIELD_TOO_LONG")
     private String title;
 
-    @NotBlank(message = "Nội dung chương không được để trống")
+    @NotBlank(message = "FIELD_REQUIRED")
     private String content;
 
-    @NotNull(message = "Số thứ tự chương không được để trống")
+    @NotNull(message = "FIELD_REQUIRED")
     private Integer chapterNumber;
 
-    @NotNull(message = "Mức độ truy cập (Công khai, Member, VIP) không được để trống")
+    @NotNull(message = "FIELD_REQUIRED")
     private AccessLevel accessLevel;
 }

@@ -9,14 +9,14 @@ import lombok.Data;
 @Data
 public class StoryRequest {
 
-    @NotBlank(message = "Tiêu đề truyện không được để trống")
-    @Size(max = 200, message = "Tiêu đề truyện không được vượt quá 200 ký tự")
+    @NotBlank(message = "FIELD_REQUIRED")
+    @Size(max = 200, message = "FIELD_TOO_LONG")
     private String title;
 
-    @NotNull(message = "ID tác giả không được để trống")
+    @NotNull(message = "FIELD_REQUIRED")
     private Long authorId;
 
-    @NotNull(message = "ID thể loại không được để trống")
+    @NotNull(message = "FIELD_REQUIRED")
     private Long genreId;
 
     private String description;
