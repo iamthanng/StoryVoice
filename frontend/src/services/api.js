@@ -24,17 +24,33 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response) {
-      if (error.response.status === 401) {
+      const { status, data } = error.response;
+      
+      if (status === 401) {
         // Handle unauthorized access (e.g., token expired)
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/login';
-      } else if (error.response.status === 403) {
+      } else if (status === 403) {
         // Handle forbidden access
         console.error("403 Forbidden: You don't have access to this resource.");
       }
+
+      // Format custom error object
+      return Promise.reject({
+        message: data?.message || 'Đã có lỗi xảy ra',
+        errorCode: data?.errorCode || 'UNCATEGORIZED_EXCEPTION',
+        fieldErrors: data?.data || {},
+        status: status
+      });
     }
-    return Promise.reject(error);
+    
+    return Promise.reject({
+      message: error.message || 'Lỗi kết nối máy chủ',
+      errorCode: 'NETWORK_ERROR',
+      fieldErrors: {},
+      status: 0
+    });
   }
 );
 

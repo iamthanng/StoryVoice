@@ -3,21 +3,25 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import api from '../services/api';
 import { AuthContext } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const { login } = useContext(AuthContext);
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   // Đăng nhập thường
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
     setLoading(true);
     try {
       const response = await api.post('/auth/login', { username, password });
@@ -25,7 +29,11 @@ const LoginPage = () => {
       login(accessToken, userData);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại.');
+      if (err.errorCode === 'VALIDATION_FAILED' && err.fieldErrors) {
+        setFieldErrors(err.fieldErrors);
+      } else {
+        setError(err.errorCode ? t(`errors.${err.errorCode}`) : err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -111,12 +119,14 @@ const LoginPage = () => {
             <label className="block text-textSecondary text-sm mb-1">Tên đăng nhập</label>
             <input
               type="text"
-              required
               className="w-full bg-background border border-gray-700 rounded-lg px-4 py-2.5 text-textPrimary focus:outline-none focus:border-primary transition-colors"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Nhập tên tài khoản"
             />
+            {fieldErrors.username && (
+              <p className="text-red-500 text-xs mt-1">{t(`errors.${fieldErrors.username}`)}</p>
+            )}
           </div>
           <div>
             <div className="flex justify-between items-center mb-1">
@@ -127,12 +137,14 @@ const LoginPage = () => {
             </div>
             <input
               type="password"
-              required
               className="w-full bg-background border border-gray-700 rounded-lg px-4 py-2.5 text-textPrimary focus:outline-none focus:border-primary transition-colors"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
             />
+            {fieldErrors.password && (
+              <p className="text-red-500 text-xs mt-1">{t(`errors.${fieldErrors.password}`)}</p>
+            )}
           </div>
           <button
             type="submit"

@@ -1,26 +1,34 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
+import { useTranslation } from 'react-i18next';
 
 const RegisterPage = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
   
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const handleRegister = async (e) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
     setLoading(true);
     try {
       await api.post('/auth/register', { username, email, password });
       alert('Đăng ký thành công! Vui lòng đăng nhập.');
       navigate('/login');
     } catch (err) {
-      setError(err.response?.data?.message || 'Đăng ký thất bại. Tên đăng nhập hoặc email có thể đã tồn tại.');
+      if (err.errorCode === 'VALIDATION_FAILED' && err.fieldErrors) {
+        setFieldErrors(err.fieldErrors);
+      } else {
+        setError(err.errorCode ? t(`errors.${err.errorCode}`) : err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -40,35 +48,40 @@ const RegisterPage = () => {
             <label className="block text-textSecondary text-sm mb-1">Tên đăng nhập</label>
             <input
               type="text"
-              required
               className="w-full bg-background border border-gray-700 rounded-md px-4 py-2 text-textPrimary focus:outline-none focus:border-primary transition-colors"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Ví dụ: nguyenvan_a"
             />
+            {fieldErrors.username && (
+              <p className="text-red-500 text-xs mt-1">{t(`errors.${fieldErrors.username}`)}</p>
+            )}
           </div>
           <div>
             <label className="block text-textSecondary text-sm mb-1">Email</label>
             <input
               type="email"
-              required
               className="w-full bg-background border border-gray-700 rounded-md px-4 py-2 text-textPrimary focus:outline-none focus:border-primary transition-colors"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="email@example.com"
             />
+            {fieldErrors.email && (
+              <p className="text-red-500 text-xs mt-1">{t(`errors.${fieldErrors.email}`)}</p>
+            )}
           </div>
           <div>
             <label className="block text-textSecondary text-sm mb-1">Mật khẩu</label>
             <input
               type="password"
-              required
-              minLength={6}
               className="w-full bg-background border border-gray-700 rounded-md px-4 py-2 text-textPrimary focus:outline-none focus:border-primary transition-colors"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Ít nhất 6 ký tự"
             />
+            {fieldErrors.password && (
+              <p className="text-red-500 text-xs mt-1">{t(`errors.${fieldErrors.password}`)}</p>
+            )}
           </div>
           <button
             type="submit"
